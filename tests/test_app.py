@@ -47,6 +47,8 @@ class AppSmokeTests(unittest.TestCase):
         self.assertNotIn("gemini", lowered)
         self.assertNotIn("google", lowered)
         self.assertNotIn("generativelanguage", lowered)
+        self.assertNotIn("setup help", lowered)
+        self.assertNotIn("academic project", lowered)
 
     def test_extractive_summary_ui_flow(self) -> None:
         app = AppTest.from_file("app.py", default_timeout=60).run()
