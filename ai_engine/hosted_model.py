@@ -149,6 +149,8 @@ class HostedModel:
                 "max_tokens": max(32, int(max_tokens)),
                 "stream": False,
             }
+            if "generativelanguage.googleapis.com" in self.base_url.lower():
+                payload["reasoning_effort"] = "low"
             if seed is not None:
                 payload["seed"] = int(seed)
 

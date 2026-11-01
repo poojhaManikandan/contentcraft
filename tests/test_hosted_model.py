@@ -59,6 +59,7 @@ class HostedModelTests(unittest.TestCase):
         self.assertEqual(kwargs["json"]["messages"][1]["content"], "Write something")
         self.assertEqual(kwargs["json"]["max_tokens"], 250)
         self.assertFalse(kwargs["json"]["stream"])
+        self.assertNotIn("reasoning_effort", kwargs["json"])
 
     def test_gemini_model_404_uses_current_fallback(self) -> None:
         missing = HostedResponse({"error": {"message": "model not found"}}, status_code=404)
@@ -74,6 +75,7 @@ class HostedModelTests(unittest.TestCase):
         self.assertEqual(text, "Fallback response.")
         self.assertEqual(post.call_count, 2)
         self.assertEqual(post.call_args_list[1].kwargs["json"]["model"], "gemini-3.8-flash")
+        self.assertEqual(post.call_args_list[1].kwargs["json"]["reasoning_effort"], "low")
 
     def test_unauthorized_response_is_clear(self) -> None:
         response = HostedResponse(
