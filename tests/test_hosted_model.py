@@ -60,6 +60,21 @@ class HostedModelTests(unittest.TestCase):
         self.assertEqual(kwargs["json"]["max_tokens"], 250)
         self.assertFalse(kwargs["json"]["stream"])
 
+    def test_gemini_model_404_uses_current_fallback(self) -> None:
+        missing = HostedResponse({"error": {"message": "model not found"}}, status_code=404)
+        success = HostedResponse(
+            {"choices": [{"message": {"content": "Fallback response."}}]}
+        )
+        with patch(
+            "ai_engine.hosted_model.requests.post", side_effect=[missing, success]
+        ) as post:
+            model = HostedModel(api_key="test-key", model="gemini-2.5-flash")
+            text = model.generate("Hello")
+
+        self.assertEqual(text, "Fallback response.")
+        self.assertEqual(post.call_count, 2)
+        self.assertEqual(post.call_args_list[1].kwargs["json"]["model"], "gemini-3.8-flash")
+
     def test_unauthorized_response_is_clear(self) -> None:
         response = HostedResponse(
             {"error": {"message": "invalid key"}},
@@ -106,7 +121,7 @@ class ProviderSelectionTests(unittest.TestCase):
         self.assertTrue(config.hosted)
         self.assertTrue(config.key_configured)
         self.assertEqual(config.label, "Google Gemini")
-        self.assertEqual(config.model, "gemini-2.5-flash")
+        self.assertEqual(config.model, "gemini-3.8-flash")
         self.assertEqual(
             config.endpoint,
             "https://generativelanguage.googleapis.com/v1beta/openai",

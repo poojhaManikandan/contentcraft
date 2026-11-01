@@ -10,8 +10,13 @@ from ai_engine.errors import ModelError
 from ai_engine.local_model import ModelStatus
 
 DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai"
-DEFAULT_MODEL = "gemini-2.5-flash"
+DEFAULT_MODEL = "gemini-3.8-flash"
 DEFAULT_PROVIDER = "Google Gemini"
+GEMINI_FALLBACK_MODELS = (
+    "gemini-3.8-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-flash-latest",
+)
 
 
 def normalize_base_url(url: str) -> str:
@@ -124,37 +129,50 @@ class HostedModel:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
 
-        payload = {
-            "model": self.model,
-            "messages": messages,
-            "temperature": max(0.0, min(float(temperature), 2.0)),
-            "top_p": max(0.0, min(float(top_p), 1.0)),
-            "max_tokens": max(32, int(max_tokens)),
-            "stream": False,
-        }
-        if seed is not None:
-            payload["seed"] = int(seed)
-
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
             "X-Title": "ContentCraft",
         }
 
-        try:
-            response = requests.post(
-                f"{self.base_url}/chat/completions",
-                json=payload,
-                headers=headers,
-                timeout=(5, self.timeout),
-            )
-        except requests.exceptions.Timeout as exc:
-            raise ModelError(
-                f"The AI request timed out after {self.timeout} seconds. "
-                "Try a shorter input or a shorter target length."
-            ) from exc
-        except requests.exceptions.RequestException as exc:
-            raise ModelError(f"Could not contact the AI service: {exc}") from exc
+        models = [self.model]
+        if "generativelanguage.googleapis.com" in self.base_url.lower():
+            models.extend(model for model in GEMINI_FALLBACK_MODELS if model not in models)
+
+        response = None
+        for index, model in enumerate(models):
+            payload = {
+                "model": model,
+                "messages": messages,
+                "temperature": max(0.0, min(float(temperature), 2.0)),
+                "top_p": max(0.0, min(float(top_p), 1.0)),
+                "max_tokens": max(32, int(max_tokens)),
+                "stream": False,
+            }
+            if seed is not None:
+                payload["seed"] = int(seed)
+
+            try:
+                response = requests.post(
+                    f"{self.base_url}/chat/completions",
+                    json=payload,
+                    headers=headers,
+                    timeout=(5, self.timeout),
+                )
+            except requests.exceptions.Timeout as exc:
+                raise ModelError(
+                    f"The AI request timed out after {self.timeout} seconds. "
+                    "Try a shorter input or a shorter target length."
+                ) from exc
+            except requests.exceptions.RequestException as exc:
+                raise ModelError(f"Could not contact the AI service: {exc}") from exc
+
+            if response.status_code == 404 and index < len(models) - 1:
+                continue
+            break
+
+        if response is None:
+            raise ModelError("The AI service did not return a response.")
 
         if response.status_code == 401 or response.status_code == 403:
             raise ModelError(

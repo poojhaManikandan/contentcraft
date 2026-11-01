@@ -40,7 +40,7 @@ Additional UI features:
 
 - Python 3.11+ (tested with Python 3.13.14)
 - Streamlit for the web interface
-- Google Gemini `gemini-2.5-flash` through the OpenAI-compatible Gemini endpoint
+- Google Gemini `gemini-3.8-flash` through the OpenAI-compatible Gemini endpoint
 - Optional Ollama with `qwen2.5:3b` for local development
 - NLTK for sentence tokenization and stopwords
 - scikit-learn for TF-IDF
@@ -163,7 +163,7 @@ Edit `.streamlit/secrets.toml`:
 AI_MODE = "hosted"
 GEMINI_API_KEY = "your-gemini-api-key"
 AI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai"
-AI_MODEL = "gemini-2.5-flash"
+AI_MODEL = "gemini-3.8-flash"
 AI_PROVIDER = "Google Gemini"
 ```
 
@@ -223,7 +223,7 @@ In **App settings > Secrets**, paste:
 AI_MODE = "hosted"
 GEMINI_API_KEY = "your-gemini-api-key"
 AI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai"
-AI_MODEL = "gemini-2.5-flash"
+AI_MODEL = "gemini-3.8-flash"
 AI_PROVIDER = "Google Gemini"
 ```
 
@@ -264,7 +264,7 @@ Settings are read from environment variables first, then from Streamlit secrets.
 | `GEMINI_API_KEY` | none | Gemini API key; required for hosted mode |
 | `AI_API_KEY` | none | Generic hosted API key; used if `GEMINI_API_KEY` is absent |
 | `AI_BASE_URL` | `https://generativelanguage.googleapis.com/v1beta/openai` | OpenAI-compatible API base |
-| `AI_MODEL` | `gemini-2.5-flash` | Hosted model name |
+| `AI_MODEL` | `gemini-3.8-flash` | Hosted model name |
 | `AI_PROVIDER` | inferred from the endpoint | Friendly provider name shown in the UI |
 | `OLLAMA_MODEL` | `qwen2.5:3b` | Local model name when `AI_MODE=local` |
 | `OLLAMA_HOST` | `http://localhost:11434` | Local Ollama server URL |
@@ -552,7 +552,7 @@ cloud vector databases and enterprise infrastructure.
 
 ### "Model was not found"
 
-- Check `AI_MODEL`. The default is `gemini-2.5-flash`.
+- Check `AI_MODEL`. The default is `gemini-3.8-flash`.
 - Check `AI_BASE_URL`. The default Gemini OpenAI-compatible base is
   `https://generativelanguage.googleapis.com/v1beta/openai`.
 - Model names and availability can change; use a model available to your account.
