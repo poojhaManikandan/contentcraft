@@ -81,9 +81,8 @@ class HostedModel:
                 host=self.base_url,
                 model=self.model,
                 message=(
-                    "GEMINI_API_KEY or AI_API_KEY is not configured. Add the hosted "
-                    "API key to Streamlit secrets or the environment, then refresh "
-                    "the status."
+                    "The AI service key is not configured. Add AI_API_KEY to "
+                    "Streamlit secrets or the environment, then refresh the status."
                 ),
             )
         return ModelStatus(
@@ -93,8 +92,8 @@ class HostedModel:
             model=self.model,
             available_models=[self.model],
             message=(
-                f"{self.provider} is configured with {self.model}. "
-                "The key is checked when the first request is sent."
+                "The AI service is configured. The key is checked when the first "
+                "request is sent."
             ),
         )
 
@@ -116,8 +115,8 @@ class HostedModel:
             raise ModelError("The prompt is empty. Please provide some input text.")
         if not self.api_key:
             raise ModelError(
-                "The hosted AI API key is missing. Set GEMINI_API_KEY or "
-                "AI_API_KEY in Streamlit secrets or the environment."
+                "The AI service key is missing. Set AI_API_KEY in Streamlit "
+                "secrets or the environment."
             )
 
         messages = []
@@ -151,43 +150,40 @@ class HostedModel:
             )
         except requests.exceptions.Timeout as exc:
             raise ModelError(
-                f"The hosted AI request timed out after {self.timeout} seconds. "
+                f"The AI request timed out after {self.timeout} seconds. "
                 "Try a shorter input or a shorter target length."
             ) from exc
         except requests.exceptions.RequestException as exc:
-            raise ModelError(f"Could not contact the hosted AI provider: {exc}") from exc
+            raise ModelError(f"Could not contact the AI service: {exc}") from exc
 
         if response.status_code == 401 or response.status_code == 403:
             raise ModelError(
-                "The hosted AI provider rejected the API key. Check AI_API_KEY "
-                "and restart the app."
+                "The AI service rejected the API key. Check AI_API_KEY and restart the app."
             )
         if response.status_code == 404:
             raise ModelError(
-                f"Model '{self.model}' was not found at {self.base_url}. "
-                "Check AI_MODEL and AI_BASE_URL."
+                "The configured AI model was not found. Check AI_MODEL and AI_BASE_URL."
             )
         if response.status_code == 429:
             raise ModelError(
-                "The hosted AI provider rate limit was reached. Wait a moment and try again."
+                "The AI service rate limit was reached. Wait a moment and try again."
             )
         if response.status_code >= 400:
             raise ModelError(
-                f"{self.provider} returned an error: {_response_detail(response)}"
+                f"The AI service returned an error: {_response_detail(response)}"
             )
 
         try:
             data = response.json()
         except ValueError as exc:
             raise ModelError(
-                f"{self.provider} returned an invalid response "
-                f"(HTTP {response.status_code})."
+                f"The AI service returned an invalid response (HTTP {response.status_code})."
             ) from exc
 
         choices = data.get("choices") or []
         if not choices:
             raise ModelError(
-                f"{self.provider} returned no choices. Check the model name and try again."
+                "The AI service returned no choices. Check the model name and try again."
             )
 
         message = choices[0].get("message") or {}

@@ -23,7 +23,7 @@ import streamlit.components.v1 as components
 from ai_engine.errors import ModelError
 from ai_engine.local_model import ModelStatus
 from ai_engine.model_client import TextModel
-from ai_engine.provider import create_model, get_provider_config, model_description
+from ai_engine.provider import create_model, get_provider_config
 from modules.content_generator import (
     CONTENT_TYPES,
     MAX_WORDS,
@@ -90,19 +90,15 @@ def load_css() -> None:
 def render_setup_help(expanded: bool = False) -> None:
     config = get_provider_config()
     if config.hosted:
-        with st.expander("Hosted API setup instructions", expanded=expanded):
+        with st.expander("AI setup instructions", expanded=expanded):
             st.markdown(
-                "1. **Create a Gemini API key** in Google AI Studio.\n"
-                "2. **Add the key to Streamlit secrets** as `GEMINI_API_KEY` or `AI_API_KEY`.\n"
-                "3. **Set the endpoint and model** if the defaults do not match your provider.\n"
-                "4. **Restart or refresh** the app after saving the secrets."
+                "1. **Add the AI service key** to Streamlit secrets as `AI_API_KEY`.\n"
+                "2. **Set `AI_BASE_URL` and `AI_MODEL`** only if required by your provider.\n"
+                "3. **Restart or refresh** the app after saving the secrets."
             )
             st.code(
                 'AI_MODE = "hosted"\n'
-                'GEMINI_API_KEY = "your-gemini-api-key"\n'
-                'AI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai"\n'
-                'AI_MODEL = "gemini-2.5-flash"\n'
-                'AI_PROVIDER = "Google Gemini"',
+                'AI_API_KEY = "your-api-key"',
                 language="toml",
             )
             st.caption(
@@ -135,8 +131,7 @@ def require_model(status: ModelStatus) -> bool:
     if config.hosted:
         st.markdown(
             '<div class="cc-note">ContentCraft will not show fake AI results. Add '
-            "GEMINI_API_KEY or AI_API_KEY to Streamlit secrets, then refresh the "
-            "model status.</div>",
+            "AI_API_KEY to Streamlit secrets, then refresh the model status.</div>",
             unsafe_allow_html=True,
         )
     else:
@@ -330,17 +325,22 @@ def render_sidebar(status: ModelStatus) -> str:
         page = st.radio("Navigation", PAGES, label_visibility="collapsed", key="navigation")
 
         if status.model_available:
-            dot, label = "ok", "Hosted model ready" if config.hosted else "Local model ready"
+            dot, label = "ok", "AI model ready" if config.hosted else "Local model ready"
         elif status.connected:
-            dot, label = "warn", "Model unavailable"
+            dot, label = "warn", "AI model unavailable" if config.hosted else "Model unavailable"
         else:
-            dot, label = "off", "API key missing" if config.hosted else "Ollama offline"
+            dot, label = "off", "AI not configured" if config.hosted else "Ollama offline"
 
+        body = (
+            "AI-powered writing"
+            if config.hosted
+            else f"{html.escape(status.model)}<br>{html.escape(status.host)}"
+        )
         st.markdown(
             f"""
             <div class="cc-side-status">
                 <div class="cc-side-status-head"><span class="cc-dot {dot}"></span>{html.escape(label)}</div>
-                <div class="cc-side-status-body">{html.escape(status.model)}<br>{html.escape(status.host)}</div>
+                <div class="cc-side-status-body">{body}</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -353,7 +353,7 @@ def render_sidebar(status: ModelStatus) -> str:
         with st.expander("Setup help"):
             if config.hosted:
                 st.markdown(
-                    "1. Add `GEMINI_API_KEY` to Streamlit secrets.\n"
+                    "1. Add `AI_API_KEY` to Streamlit secrets.\n"
                     "2. Set `AI_BASE_URL` and `AI_MODEL` if needed.\n"
                     "3. Refresh the model status."
                 )
@@ -374,17 +374,16 @@ def render_sidebar(status: ModelStatus) -> str:
 
 def page_dashboard(status: ModelStatus) -> None:
     config = get_provider_config()
-    kicker = "Hosted AI - Public demo" if config.hosted else "Local AI - Privacy-first"
+    kicker = "AI writing - Public demo" if config.hosted else "Local AI - Privacy-first"
     description = (
         "ContentCraft is a writing assistant for blogs, essays, reports, emails and study "
         "notes. Summarize long documents, rewrite text in a new style and pull out key terms "
-        "with a secure hosted AI model."
+        "with a secure AI model."
         if config.hosted
         else "ContentCraft is a self-contained writing assistant for blogs, essays, reports, "
         "emails and study notes. Summarize long documents, rewrite text in a new style and "
         "pull out key terms with a model running on your own computer."
     )
-    provider_chip = "Secure hosted API" if config.hosted else "No cloud AI APIs"
     st.markdown(
         f"""
         <div class="cc-hero">
@@ -392,10 +391,9 @@ def page_dashboard(status: ModelStatus) -> None:
             <h1>Write, summarize and study smarter.</h1>
             <p>{html.escape(description)}</p>
             <div class="cc-chips">
-                <span>{html.escape(config.label)}</span>
-                <span>{html.escape(config.model)}</span>
-                <span>Five writing tools</span>
-                <span>{html.escape(provider_chip)}</span>
+                <span>AI-powered</span>
+                <span>Six writing tools</span>
+                <span>No account needed</span>
             </div>
         </div>
         """,
@@ -419,7 +417,7 @@ def page_dashboard(status: ModelStatus) -> None:
 
     section_title("How the application works", "Four simple steps from an idea or document to a finished result.")
     run_text = (
-        f"{config.label} generates text through its hosted API. Extractive tools run without the AI model."
+        "The AI service generates text when you run an AI tool. Extractive tools run without the AI model."
         if config.hosted
         else "Ollama serves the local model on this machine. Extractive tools run without the AI model."
     )
@@ -437,28 +435,31 @@ def page_dashboard(status: ModelStatus) -> None:
 
     section_title("AI model status", "AI text is generated only when the configured model is available.")
     if status.model_available:
-        dot, title = "ok", "Hosted model ready" if config.hosted else "Local model ready"
+        dot, title = "ok", "AI model ready" if config.hosted else "Local model ready"
     elif status.connected:
-        dot, title = "warn", "Hosted model unavailable" if config.hosted else "Model missing"
+        dot, title = "warn", "AI model unavailable" if config.hosted else "Model missing"
     else:
-        dot, title = "off", "API key not configured" if config.hosted else "Ollama is offline"
+        dot, title = "off", "AI not configured" if config.hosted else "Ollama is offline"
 
-    third_label = "Provider" if config.hosted else "Installed"
-    third_value = (
-        config.label
-        if config.hosted
-        else ", ".join(status.available_models[:6]) if status.available_models else "None detected"
-    )
+    status_meta = ""
+    if not config.hosted:
+        installed = (
+            ", ".join(status.available_models[:6]) if status.available_models else "None detected"
+        )
+        status_meta = (
+            '<div class="cc-status-meta">'
+            f"<span><strong>Model</strong> {html.escape(status.model)}</span>"
+            f"<span><strong>Installed</strong> {html.escape(installed)}</span>"
+            f"<span><strong>Endpoint</strong> {html.escape(status.host)}</span>"
+            "</div>"
+        )
+
     st.markdown(
         f"""
         <div class="cc-status-card">
             <div class="cc-status-title"><span class="cc-dot {dot}"></span>{html.escape(title)}</div>
             <div class="cc-status-detail">{html.escape(status.message)}</div>
-            <div class="cc-status-meta">
-                <span><strong>Model</strong> {html.escape(status.model)}</span>
-                <span><strong>{third_label}</strong> {html.escape(third_value)}</span>
-                <span><strong>Endpoint</strong> {html.escape(status.host)}</span>
-            </div>
+            {status_meta}
         </div>
         """,
         unsafe_allow_html=True,
@@ -471,7 +472,7 @@ def page_dashboard(status: ModelStatus) -> None:
             st.rerun()
     with note_column:
         note = (
-            "The hosted provider is contacted only when you run an AI action. "
+            "The AI service is contacted only when you run an AI action. "
             "Generated text should always be reviewed before use."
             if config.hosted
             else "The first request after starting Ollama can take longer while the model loads. "
@@ -493,7 +494,6 @@ def page_dashboard(status: ModelStatus) -> None:
 # Module pages
 # ----------------------------------------------------------------------
 def page_content_generator(status: ModelStatus) -> None:
-    config = get_provider_config()
     page_head(
         "Module 01",
         "Content Generator",
@@ -546,8 +546,6 @@ def page_content_generator(status: ModelStatus) -> None:
             """,
             unsafe_allow_html=True,
         )
-        st.caption(f"Model: {model_description(config)}")
-
     button_one, button_two = st.columns(2)
     generate_clicked = button_one.button(
         "Generate content", type="primary", width="stretch", key="cg_generate"
@@ -563,7 +561,7 @@ def page_content_generator(status: ModelStatus) -> None:
     if generate_clicked:
         if require_model(status):
             try:
-                with st.spinner(f"Writing your {content_type.lower()} with {config.model}..."):
+                with st.spinner(f"Writing your {content_type.lower()}..."):
                     content = generate_content(
                         topic=topic,
                         content_type=content_type,
@@ -590,7 +588,7 @@ def page_content_generator(status: ModelStatus) -> None:
         if require_model(status):
             try:
                 variation = int(existing.get("variation", 0)) + 1
-                with st.spinner(f"Writing a fresh version with {config.model}..."):
+                with st.spinner("Writing a fresh version..."):
                     content = generate_content(
                         topic=existing["topic"],
                         content_type=existing["content_type"],
@@ -615,7 +613,6 @@ def page_content_generator(status: ModelStatus) -> None:
             "Tone": result["tone"],
             "Target length": f"{result['target_words']} words",
             "Generated": result["created"],
-            "Model": model_description(config),
         }
         render_result(
             title=f"{result['topic']} - {result['content_type']}",
@@ -634,7 +631,6 @@ def page_content_generator(status: ModelStatus) -> None:
 
 
 def page_text_summarizer(status: ModelStatus) -> None:
-    config = get_provider_config()
     page_head(
         "Module 02",
         "Text Summarizer",
@@ -656,7 +652,7 @@ def page_text_summarizer(status: ModelStatus) -> None:
     if method == "Extractive":
         st.caption("Extractive mode uses TF-IDF sentence scoring and works without the AI model.")
     else:
-        st.caption(f"Abstractive mode uses {config.model} via {config.label} to write a new summary.")
+        st.caption("Abstractive mode uses the AI model to write a new summary.")
 
     if st.button("Summarize text", type="primary", width="stretch", key="summary_run"):
         model_ready = method == "Extractive" or require_model(status)

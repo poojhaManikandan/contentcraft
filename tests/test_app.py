@@ -38,6 +38,16 @@ class AppSmokeTests(unittest.TestCase):
             app.sidebar.radio[0].set_value(page).run()
             self.assertEqual(len(app.exception), 0, f"Page failed: {page}")
 
+    def test_hosted_ui_hides_provider_details(self) -> None:
+        app = AppTest.from_file("app.py", default_timeout=60).run()
+        rendered = " ".join(str(element.value) for element in app.markdown)
+        rendered += " " + " ".join(str(element.value) for element in app.caption)
+        lowered = rendered.lower()
+
+        self.assertNotIn("gemini", lowered)
+        self.assertNotIn("google", lowered)
+        self.assertNotIn("generativelanguage", lowered)
+
     def test_extractive_summary_ui_flow(self) -> None:
         app = AppTest.from_file("app.py", default_timeout=60).run()
         app.sidebar.radio[0].set_value("Text Summarizer").run()
