@@ -10,11 +10,12 @@ from ai_engine.errors import ModelError
 from ai_engine.local_model import ModelStatus
 
 DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai"
-DEFAULT_MODEL = "gemini-3.8-flash"
+DEFAULT_MODEL = "gemini-3.5-flash-lite"
 DEFAULT_PROVIDER = "Google Gemini"
 GEMINI_FALLBACK_MODELS = (
-    "gemini-3.8-flash",
     "gemini-3.5-flash-lite",
+    "gemini-3.6-flash",
+    "gemini-3.8-flash",
     "gemini-flash-latest",
 )
 
@@ -25,6 +26,21 @@ def normalize_base_url(url: str) -> str:
     if not value.startswith(("http://", "https://")):
         value = "https://" + value
     return value
+
+
+def _reasoning_effort(model: str) -> str:
+    """Use the lowest supported thinking level for fast content generation."""
+    lowered = model.lower()
+    if lowered.startswith(
+        (
+            "gemini-3.5-flash-lite",
+            "gemini-3.1-flash-lite",
+            "gemini-3.6-flash",
+            "gemini-3-flash-preview",
+        )
+    ):
+        return "minimal"
+    return "low"
 
 
 def _response_detail(response: requests.Response) -> str:
@@ -164,7 +180,7 @@ class HostedModel:
                 payload["temperature"] = max(0.0, min(float(temperature), 2.0))
                 payload["top_p"] = max(0.0, min(float(top_p), 1.0))
             if google_endpoint:
-                payload["reasoning_effort"] = "low"
+                payload["reasoning_effort"] = _reasoning_effort(model)
             if seed is not None:
                 payload["seed"] = int(seed)
 

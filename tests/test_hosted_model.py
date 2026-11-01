@@ -75,10 +75,21 @@ class HostedModelTests(unittest.TestCase):
         self.assertEqual(text, "Fallback response.")
         self.assertEqual(post.call_count, 2)
         fallback_payload = post.call_args_list[1].kwargs["json"]
-        self.assertEqual(fallback_payload["model"], "gemini-3.8-flash")
-        self.assertEqual(fallback_payload["reasoning_effort"], "low")
+        self.assertEqual(fallback_payload["model"], "gemini-3.5-flash-lite")
+        self.assertEqual(fallback_payload["reasoning_effort"], "minimal")
         self.assertNotIn("temperature", fallback_payload)
         self.assertNotIn("top_p", fallback_payload)
+
+    def test_gemini_38_uses_supported_low_reasoning(self) -> None:
+        response = HostedResponse(
+            {"choices": [{"message": {"content": "Slow model response."}}]}
+        )
+        with patch("ai_engine.hosted_model.requests.post", return_value=response) as post:
+            model = HostedModel(api_key="test-key", model="gemini-3.8-flash")
+            model.generate("Hello")
+
+        payload = post.call_args.kwargs["json"]
+        self.assertEqual(payload["reasoning_effort"], "low")
 
     def test_list_error_response_is_handled(self) -> None:
         response = HostedResponse([{"error": "bad request"}], status_code=400)
@@ -137,7 +148,7 @@ class ProviderSelectionTests(unittest.TestCase):
         self.assertTrue(config.hosted)
         self.assertTrue(config.key_configured)
         self.assertEqual(config.label, "Google Gemini")
-        self.assertEqual(config.model, "gemini-3.8-flash")
+        self.assertEqual(config.model, "gemini-3.5-flash-lite")
         self.assertEqual(
             config.endpoint,
             "https://generativelanguage.googleapis.com/v1beta/openai",
