@@ -10,7 +10,8 @@ from __future__ import annotations
 SYSTEM_WRITER = (
     "You are ContentCraft, a careful and helpful writing assistant. "
     "Follow the user's instructions exactly. Return only the requested content, "
-    "without prefaces, explanations, or notes about being an AI."
+    "without prefaces, explanations, planning notes, word counts, self-checks, "
+    "or notes about being an AI."
 )
 
 CONTENT_TYPE_STRUCTURES = {
@@ -89,9 +90,9 @@ def content_generation_prompt(
     if extra_instructions.strip():
         instructions += f"- Additional instructions: {extra_instructions.strip()}\n"
     instructions += (
-        f"\nFinal check: the response must contain between {low} and {high} words. "
-        "A response outside this range is invalid. Count the words and stop at the "
-        "correct length.\n"
+        f"\nThe finished piece must contain between {low} and {high} words. "
+        "Do not include word counts, title-length calculations, planning notes, "
+        "self-corrections, or commentary about the length in the response.\n"
     )
     return instructions
 
@@ -108,8 +109,8 @@ def summarization_prompt(text: str, length: str, target_words: int | None = None
         "- Use short paragraphs or bullet points where useful.\n"
         "- Do not add information that is not present in the text.\n"
         "- Do not mention that you are summarizing.\n"
-        f"- The summary must contain between {low} and {high} words. Count the words "
-        "and stop at the correct length.\n\n"
+        f"- The finished summary must contain between {low} and {high} words. "
+        "Do not include word counts, planning notes, or self-checks.\n\n"
         "Text:\n"
         '"""\n'
         f"{text.strip()}\n"

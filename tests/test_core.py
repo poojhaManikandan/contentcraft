@@ -205,6 +205,7 @@ class GenerationAndRewriteTests(unittest.TestCase):
         self.assertIn("Academic", fake.prompts[0])
         self.assertIn("regeneration", fake.prompts[0])
         self.assertIn("between 270 and 330 words", fake.prompts[0])
+        self.assertIn("Do not include word counts", fake.prompts[0])
         self.assertGreaterEqual(fake.kwargs[0]["temperature"], 0.4)
         self.assertLessEqual(fake.kwargs[0]["temperature"], 0.6)
 
