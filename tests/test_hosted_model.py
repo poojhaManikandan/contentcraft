@@ -74,8 +74,22 @@ class HostedModelTests(unittest.TestCase):
 
         self.assertEqual(text, "Fallback response.")
         self.assertEqual(post.call_count, 2)
-        self.assertEqual(post.call_args_list[1].kwargs["json"]["model"], "gemini-3.8-flash")
-        self.assertEqual(post.call_args_list[1].kwargs["json"]["reasoning_effort"], "low")
+        fallback_payload = post.call_args_list[1].kwargs["json"]
+        self.assertEqual(fallback_payload["model"], "gemini-3.8-flash")
+        self.assertEqual(fallback_payload["reasoning_effort"], "low")
+        self.assertNotIn("temperature", fallback_payload)
+        self.assertNotIn("top_p", fallback_payload)
+
+    def test_list_error_response_is_handled(self) -> None:
+        response = HostedResponse([{"error": "bad request"}], status_code=400)
+        with patch("ai_engine.hosted_model.requests.post", return_value=response):
+            model = HostedModel(
+                api_key="test-key",
+                base_url="https://api.groq.com/openai/v1",
+                model="test-model",
+            )
+            with self.assertRaisesRegex(ModelError, "bad request"):
+                model.generate("Hello")
 
     def test_unauthorized_response_is_clear(self) -> None:
         response = HostedResponse(

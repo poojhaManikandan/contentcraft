@@ -34,6 +34,17 @@ def _response_detail(response: requests.Response) -> str:
     except ValueError:
         return (response.text or f"HTTP {response.status_code}")[:300]
 
+    if isinstance(data, list):
+        if data and isinstance(data[0], dict):
+            first = data[0]
+            detail = first.get("message") or first.get("error") or str(first)
+        else:
+            detail = str(data)
+        return str(detail)[:300]
+
+    if not isinstance(data, dict):
+        return str(data)[:300]
+
     error = data.get("error")
     if isinstance(error, dict):
         detail = error.get("message") or error.get("code") or str(error)
@@ -140,16 +151,19 @@ class HostedModel:
             models.extend(model for model in GEMINI_FALLBACK_MODELS if model not in models)
 
         response = None
+        google_endpoint = "generativelanguage.googleapis.com" in self.base_url.lower()
         for index, model in enumerate(models):
+            gemini_3 = google_endpoint and model.startswith(("gemini-3", "gemini-4"))
             payload = {
                 "model": model,
                 "messages": messages,
-                "temperature": max(0.0, min(float(temperature), 2.0)),
-                "top_p": max(0.0, min(float(top_p), 1.0)),
                 "max_tokens": max(32, int(max_tokens)),
                 "stream": False,
             }
-            if "generativelanguage.googleapis.com" in self.base_url.lower():
+            if not gemini_3:
+                payload["temperature"] = max(0.0, min(float(temperature), 2.0))
+                payload["top_p"] = max(0.0, min(float(top_p), 1.0))
+            if google_endpoint:
                 payload["reasoning_effort"] = "low"
             if seed is not None:
                 payload["seed"] = int(seed)
